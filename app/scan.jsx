@@ -26,12 +26,20 @@ export default function Scan() {
     if (!cameraRef.current || scanning) return;
     setScanning(true);
     try {
-      const photo = await cameraRef.current.takePictureAsync({ base64: true });
+      const photo = await cameraRef.current.takePictureAsync({
+        base64: true,
+        quality: 0.6,
+        exif: false,
+      });
       const found = await analyzeImage(photo?.base64);
       setFoundCount(found.length);
       await addIngredients(found);
     } catch (error) {
-      Alert.alert("Analysen misslyckades", error.message || "Försök igen.");
+      Alert.alert(
+        "Analysen misslyckades",
+        error.message ||
+          "Försök igen. Kontrollera att bilden inte är för stor.",
+      );
       setScanning(false);
       return;
     }
@@ -42,6 +50,21 @@ export default function Scan() {
   };
 
   async function analyzeImage(base64Image) {
+    const sanitizedBase64 = (base64Image || "")
+      .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "")
+      .trim();
+
+    if (!sanitizedBase64) {
+      throw new Error("Det finns ingen bild att analysera.");
+    }
+
+    const approximateBytes = Math.ceil((sanitizedBase64.length * 3) / 4);
+    if (approximateBytes > 1_600_000) {
+      throw new Error(
+        "Bilden är för stor. Ta ett nytt foto med bättre ljus och lite längre avstånd.",
+      );
+    }
+
     const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(
       /\/$/,
       "",
@@ -64,17 +87,22 @@ export default function Scan() {
         ? configuredApiUrl
         : fallbackApiUrl;
 
-    const response = await fetch(
-      `${apiUrl.replace(/\/$/, "")}/analyze-fridge`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ base64Image }),
-      },
-    );
+    const isHostedApi = /(vercel\.app|render\.com|railway\.app)/.test(apiUrl);
+    const endpoint = isHostedApi
+      ? `${apiUrl.replace(/\/$/, "")}/api/analyze-fridge`
+      : `${apiUrl.replace(/\/$/, "")}/analyze-fridge`;
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64Image: sanitizedBase64 }),
+    });
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
-      throw new Error(error.error || "Backend kunde inte analysera bilden.");
+      throw new Error(
+        error.error ||
+          `Backend kunde inte analysera bilden (${response.status}).`,
+      );
     }
     const result = await response.json();
     return Array.isArray(result.ingredients)

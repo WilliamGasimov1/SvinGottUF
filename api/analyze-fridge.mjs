@@ -25,6 +25,22 @@ function parseOpenAIResponse(body) {
   }
 }
 
+async function readRequestBody(req) {
+  if (req.body) {
+    return typeof req.body === "string"
+      ? JSON.parse(req.body || "{}")
+      : req.body;
+  }
+
+  const chunks = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+
+  const raw = Buffer.concat(chunks).toString("utf8").trim();
+  return raw ? JSON.parse(raw) : {};
+}
+
 export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     sendJson(res, 204, {});
@@ -48,11 +64,22 @@ export default async function handler(req, res) {
     return;
   }
 
-  const body = req.body || {};
-  const base64Image = body.base64Image;
+  const body = await readRequestBody(req);
+  const base64Image = String(body.base64Image || "")
+    .replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/, "")
+    .trim();
 
   if (!base64Image) {
     sendJson(res, 400, { error: "base64Image krävs." });
+    return;
+  }
+
+  const approximateBytes = Math.ceil((base64Image.length * 3) / 4);
+  if (approximateBytes > 1_600_000) {
+    sendJson(res, 413, {
+      error:
+        "Bilden är för stor för att analysera. Ta ett nytt foto med mindre storlek eller bättre ljus.",
+    });
     return;
   }
 
