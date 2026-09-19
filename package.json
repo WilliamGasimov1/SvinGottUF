@@ -38,6 +38,7 @@
   },
   "scripts": {
     "start": "expo start",
+    "build": "npx expo export --platform web",
     "backend": "node --env-file=.env server/index.mjs",
     "reset-project": "node ./scripts/reset-project.js",
     "android": "expo start --android",

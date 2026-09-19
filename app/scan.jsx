@@ -40,7 +40,8 @@ export default function Scan() {
   };
 
   async function analyzeImage(base64Image) {
-    const apiUrl = process.env.EXPO_PUBLIC_API_URL || "http://localhost:8787";
+    const apiUrl =
+      process.env.EXPO_PUBLIC_API_URL || "https://svingottuf.vercel.app";
     const response = await fetch(`${apiUrl}/analyze-fridge`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
