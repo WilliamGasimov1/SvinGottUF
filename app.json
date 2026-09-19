@@ -6,8 +6,21 @@
     "orientation": "portrait",
     "scheme": "foodapp",
     "userInterfaceStyle": "automatic",
-    "android": { "predictiveBackGestureEnabled": false },
-    "web": { "output": "static" },
+    "ios": {
+      "bundleIdentifier": "com.williamgasimov.foodapp",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.williamgasimov.foodapp",
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "output": "static"
+    },
     "plugins": [
       "expo-router",
       [
@@ -26,6 +39,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "63f69030-6a50-4a09-938b-06fc4ecb51c5"
+      }
     }
   }
 }

@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { CameraView, useCameraPermissions } from "expo-camera";
+import Constants from "expo-constants";
 import { router } from "expo-router";
 import { useRef, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    Platform,
     Pressable,
     StyleSheet,
     Text,
@@ -40,13 +42,36 @@ export default function Scan() {
   };
 
   async function analyzeImage(base64Image) {
+    const configuredApiUrl = process.env.EXPO_PUBLIC_API_URL?.trim().replace(
+      /\/$/,
+      "",
+    );
+
+    const expoDebuggerHost =
+      Constants.expoConfig?.hostUri ||
+      Constants.expoGoConfig?.hostUri ||
+      Constants.manifest2?.extra?.expoGo?.debuggerHost ||
+      "localhost";
+    const expoHost = expoDebuggerHost.split(":")[0];
+
+    const fallbackApiUrl =
+      Platform.OS === "web"
+        ? "http://localhost:8787"
+        : `http://${expoHost}:8787`;
+
     const apiUrl =
-      process.env.EXPO_PUBLIC_API_URL || "https://svingottuf.vercel.app";
-    const response = await fetch(`${apiUrl}/analyze-fridge`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ base64Image }),
-    });
+      configuredApiUrl && !configuredApiUrl.includes("localhost")
+        ? configuredApiUrl
+        : fallbackApiUrl;
+
+    const response = await fetch(
+      `${apiUrl.replace(/\/$/, "")}/analyze-fridge`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ base64Image }),
+      },
+    );
     if (!response.ok) {
       const error = await response.json().catch(() => ({}));
       throw new Error(error.error || "Backend kunde inte analysera bilden.");

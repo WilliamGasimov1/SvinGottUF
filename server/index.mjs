@@ -2,7 +2,20 @@ import http from "node:http";
 import https from "node:https";
 
 const port = Number(process.env.PORT || 8787);
-const apiKey = process.env.OPENAI_API_KEY || process.env.EXPO_PUBLIC_OPENAI_KEY;
+const PLACEHOLDER_KEYS = new Set([
+  "your-vercel-openai-key",
+  "sk-your-key-here",
+  "placeholder",
+  "example",
+  "",
+]);
+const apiKey = (
+  process.env.OPENAI_API_KEY ||
+  process.env.EXPO_PUBLIC_OPENAI_KEY ||
+  ""
+).trim();
+const hasValidApiKey =
+  Boolean(apiKey) && !PLACEHOLDER_KEYS.has(apiKey.toLowerCase());
 
 function sendJson(response, status, body) {
   response.writeHead(status, {
@@ -97,9 +110,10 @@ const server = http.createServer(async (request, response) => {
     return;
   }
   if (request.method === "POST" && request.url === "/analyze-fridge") {
-    if (!apiKey) {
+    if (!hasValidApiKey) {
       sendJson(response, 500, {
-        error: "OPENAI_API_KEY saknas i backendens miljö.",
+        error:
+          "OPENAI_API_KEY saknas eller är en platshållare. Lägg in en riktig nyckel i .env innan du kör analysen.",
       });
       return;
     }
